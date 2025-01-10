@@ -1,1 +1,94 @@
+# Define colors for output
+$ColorInfo = "Cyan"
+$ColorSuccess = "Green"
+$ColorError = "Red"
+
+# Function to assign RBAC role
+function Assign-RBACRole {
+    Write-Host "Assigning RBAC Role..." -ForegroundColor $ColorInfo
+
+    # Prompt user for inputs
+    $roleDefinitionName = Read-Host "Enter the RBAC role name (e.g., Contributor)"
+    $scope = Read-Host "Enter the scope (e.g., /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName})"
+    $principalId = Read-Host "Enter the object ID of the user/group/service principal"
+
+    # Check if the scope exists
+    if (-not (Get-AzResource -ResourceId $scope -ErrorAction SilentlyContinue)) {
+        Write-Host "The scope does not exist. Please check the input." -ForegroundColor $ColorError
+        return
+    }
+
+    # Assign the role
+    New-AzRoleAssignment -RoleDefinitionName $roleDefinitionName -Scope $scope -PrincipalId $principalId -ErrorAction Stop
+    Write-Host "Role successfully assigned!" -ForegroundColor $ColorSuccess
+}
+
+# Function to remove RBAC role
+function Remove-RBACRole {
+    Write-Host "Removing RBAC Role..." -ForegroundColor $ColorInfo
+
+    # Prompt user for inputs
+    $roleDefinitionName = Read-Host "Enter the RBAC role name (e.g., Contributor)"
+    $scope = Read-Host "Enter the scope (e.g., /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName})"
+    $principalId = Read-Host "Enter the object ID of the user/group/service principal"
+
+    # Check if the role assignment exists
+    $roleAssignment = Get-AzRoleAssignment -RoleDefinitionName $roleDefinitionName -Scope $scope -PrincipalId $principalId -ErrorAction SilentlyContinue
+    if (-not $roleAssignment) {
+        Write-Host "Role assignment does not exist." -ForegroundColor $ColorError
+        return
+    }
+
+    # Remove the role
+    Remove-AzRoleAssignment -RoleAssignmentId $roleAssignment.Id -ErrorAction Stop
+    Write-Host "Role successfully removed!" -ForegroundColor $ColorSuccess
+}
+
+# Function to list RBAC roles
+function List-RBACRoles {
+    Write-Host "Listing RBAC Roles..." -ForegroundColor $ColorInfo
+
+    # Prompt user for the scope
+    $scope = Read-Host "Enter the scope (e.g., /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName})"
+
+    # Check if the scope exists
+    if (-not (Get-AzResource -ResourceId $scope -ErrorAction SilentlyContinue)) {
+        Write-Host "The scope does not exist. Please check the input." -ForegroundColor $ColorError
+        return
+    }
+
+    # List roles
+    $roleAssignments = Get-AzRoleAssignment -Scope $scope
+    if ($roleAssignments) {
+        $roleAssignments | ForEach-Object {
+            Write-Host "Role: $($_.RoleDefinitionName), Principal: $($_.PrincipalName), Scope: $($_.Scope)" -ForegroundColor $ColorSuccess
+        }
+    } else {
+        Write-Host "No role assignments found at the specified scope." -ForegroundColor $ColorError
+    }
+}
+
+# Main menu
+function Show-Menu {
+    Clear-Host
+    Write-Host "Azure RBAC Role Management" -ForegroundColor $ColorInfo
+    Write-Host "1. Assign RBAC roles"
+    Write-Host "2. Remove RBAC roles"
+    Write-Host "3. List RBAC roles"
+    Write-Host "4. Exit"
+
+    $choice = Read-Host "Select an option (1-4)"
+    switch ($choice) {
+        1 { Assign-RBACRole }
+        2 { Remove-RBACRole }
+        3 { List-RBACRoles }
+        4 { Write-Host "Exiting..." -ForegroundColor $ColorInfo; return }
+        default { Write-Host "Invalid choice. Please try again." -ForegroundColor $ColorError }
+    }
+}
+
+# Run the script in a loop
+while ($true) {
+    Show-Menu
+}
 
